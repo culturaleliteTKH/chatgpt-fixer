@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ChatGPT Fixer</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="head">
+    <img src="../../assets/icons/icon-48.png" width="24" height="24" alt="" />
+    <div>
+      <h1>ChatGPT Fixer</h1>
+      <p class="sub">Classic UX &amp; session guard · local-first</p>
+    </div>
+    <span id="proBadge" class="pill pill-free" title="License status">Free</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="fixes" aria-selected="true">Fixes</button>
+    <button class="tab" role="tab" data-tab="vault" aria-selected="false">Vault <span id="vaultCount" class="count"></span></button>
+    <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    <button class="tab" role="tab" data-tab="pro" aria-selected="false">Pro</button>
+  </nav>
+
+  <main>
+    <section id="tab-fixes" class="panel active" role="tabpanel">
+      <div id="consentBanner" class="banner hidden">
+        <strong>Local processing is off.</strong>
+        <span>Anti-Vanish and the context meter need your OK to read conversation content (stays in your browser).</span>
+        <button id="consentAllow" class="btn btn-primary btn-small">Allow</button>
+      </div>
+      <ul id="moduleList" class="modules"></ul>
+      <p class="hint">Shortcuts: <kbd>Alt+S</kbd> sidebar · <kbd>Alt+B</kbd> branch · <kbd>Alt+1…9</kbd> open search result (Pro) · <kbd>Alt+Shift+M</kbd> bulk move (Pro).
+        <a href="#" id="shortcutsLink">Change</a></p>
+    </section>
+
+    <section id="tab-vault" class="panel" role="tabpanel">
+      <div class="row">
+        <input id="vaultSearch" class="input" type="search" placeholder="Search captured responses (Pro)" />
+        <button id="vaultExport" class="btn btn-small" title="Export all as JSON (Pro)">Export</button>
+        <button id="vaultClear" class="btn btn-small btn-danger" title="Delete all captured responses">Clear</button>
+      </div>
+      <ul id="vaultList" class="vault"></ul>
+      <p id="vaultHint" class="hint"></p>
+    </section>
+
+    <section id="tab-settings" class="panel" role="tabpanel">
+      <label class="field">
+        <span>Context window (tokens)</span>
+        <select id="contextWindow">
+          <option value="8000">8k</option>
+          <option value="32000">32k</option>
+          <option value="128000">128k (default)</option>
+          <option value="200000">200k</option>
+          <option value="400000">400k</option>
+          <option value="1000000">1M</option>
+        </select>
+      </label>
+      <label class="field check"><input type="checkbox" id="showMeter" /> <span>Show context meter above the composer</span></label>
+      <label class="field check"><input type="checkbox" id="inPageShortcuts" /> <span>Listen for shortcuts inside the page (in addition to browser-level commands)</span></label>
+      <label class="field">
+        <span>Handoff depth (messages) <em class="pro-only">Pro</em></span>
+        <input type="number" id="handoffDepth" min="1" max="30" />
+      </label>
+      <label class="field">
+        <span>Handoff template <em class="pro-only">Pro</em> — placeholders: <code>{title}</code> <code>{url}</code> <code>{messages}</code> <code>{date}</code> <code>{count}</code></span>
+        <textarea id="handoffTemplate" rows="6" placeholder="Leave empty for the default template"></textarea>
+      </label>
+      <label class="field check"><input type="checkbox" id="vaultKeepRaw" /> <span>Keep raw stream events in the vault <em class="pro-only">Pro</em></span></label>
+      <label class="field check"><input type="checkbox" id="debug" /> <span>Debug logging in the page console</span></label>
+      <div class="row">
+        <button id="consentReset" class="btn btn-small">Reset consent</button>
+        <span id="consentStatus" class="hint"></span>
+      </div>
+    </section>
+
+    <section id="tab-pro" class="panel" role="tabpanel">
+      <div id="proFree">
+        <h2>Pro — one-time unlock</h2>
+        <ul class="features">
+          <li>Full Anti-Vanish history, search and Markdown/JSON export</li>
+          <li>1-click branch: new chat opens with the handoff pre-filled</li>
+          <li>Custom handoff templates and depth up to 30 messages</li>
+          <li>Bulk "Move to project" and Alt+1…9 quick-jump in search</li>
+          <li>Raw stream capture for debugging stuck responses</li>
+        </ul>
+        <p class="hint">No subscription, no account, no server. <span id="proPrice"></span></p>
+        <form id="licenseForm" class="row">
+          <input id="licenseKey" class="input" placeholder="CGF-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" />
+          <button class="btn btn-primary btn-small" type="submit">Activate</button>
+        </form>
+        <p id="licenseMsg" class="hint"></p>
+      </div>
+      <div id="proActive" class="hidden">
+        <h2>Pro is active</h2>
+        <p class="hint">Key: <code id="licenseKeyShown"></code></p>
+        <button id="licenseRemove" class="btn btn-small btn-danger">Remove license</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

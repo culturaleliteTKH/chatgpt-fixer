@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Fixer — Classic UX & Session Guard",
+  "short_name": "ChatGPT Fixer",
+  "version": "0.1.0",
+  "description": "Restores classic ChatGPT navigation and prevents lost responses on chatgpt.com. Local-first: nothing leaves your browser.",
+  "browser_specific_settings": {
+    "gecko": { "id": "chatgpt-fixer@example.com", "strict_min_version": "128.0" }
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://chatgpt.com/*"],
+  "background": {
+    "scripts": ["src/background/service-worker.js"],
+    "type": "module"
+  },
+  "action": {
+    "default_title": "ChatGPT Fixer",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["src/content/main-world/stream-interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["src/content/isolated/bootstrap.js"],
+      "css": ["src/content/isolated/styles/fixer.css"],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ],
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": { "default": "Alt+S", "mac": "Command+Shift+S" },
+      "description": "Toggle the ChatGPT sidebar"
+    },
+    "branch-chat": {
+      "suggested_key": { "default": "Alt+B", "mac": "Command+Shift+B" },
+      "description": "Branch the current conversation into a new chat"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/icons/*.svg",
+        "src/shared/*.js",
+        "src/content/isolated/*.js",
+        "src/content/isolated/db/*.js",
+        "src/content/isolated/modules/*.js"
+      ],
+      "matches": ["https://chatgpt.com/*"]
+    }
+  ]
+}
