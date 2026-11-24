@@ -225,6 +225,9 @@ async function checkVanished(st) {
   const urlConv = ctx.dom.conversationIdFromUrl();
   if (st.conversationId && urlConv && urlConv !== st.conversationId) return; // user navigated away
 
+  // Without any recognisable message markup we cannot tell a vanished reply from a selector miss.
+  if (!document.querySelector(ctx.dom.SEL.message)) { ctx.log('vanish check skipped: no message markup matched'); return; }
+
   const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
   const captured = norm(text);
   const byId = st.message?.id ? document.querySelector(ctx.dom.SEL.messageById(st.message.id)) : null;
