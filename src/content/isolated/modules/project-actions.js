@@ -30,15 +30,22 @@ function searchResults() {
 /** Open the chat's own "…" menu and click the move-to-project item. Returns true when the item was clicked. */
 async function moveToProject(item) {
   const { SEL, waitFor } = ctx.dom;
-  const container = item.closest('li') || item.parentElement || item;
-  item.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-  item.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
-  await sleep(50);
-  const opt = container.querySelector(SEL.chatItemOptions) || item.querySelector(SEL.chatItemOptions);
-  if (!opt) { ctx.ui.toast('Could not find the chat options button.', { kind: 'warn' }); return false; }
-  opt.click();
+  // Hover first: the options button is often rendered only for the hovered row.
+  for (const type of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter']) {
+    item.dispatchEvent(new MouseEvent(type, { bubbles: type !== 'mouseenter' && type !== 'pointerenter', cancelable: true }));
+  }
+  await sleep(120);
+  let opt = null;
+  let scope = item;
+  for (let i = 0; i < 4 && scope && !opt; i++) {
+    opt = scope.querySelector(SEL.chatItemOptions);
+    scope = scope.parentElement;
+  }
+  if (opt) opt.click();
+  else item.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: item.getBoundingClientRect().left + 20, clientY: item.getBoundingClientRect().top + 10 }));
   let menu;
-  try { menu = await waitFor(SEL.menu, { timeout: 2500 }); } catch { ctx.ui.toast('The options menu did not open.', { kind: 'warn' }); return false; }
+  try { menu = await waitFor(SEL.menu, { timeout: 2500 }); }
+  catch { ctx.ui.toast(opt ? 'The options menu did not open.' : 'Could not find the chat options button (run Diagnostics in the popup).', { kind: 'warn' }); return false; }
   await sleep(80);
   const items = Array.from(menu.querySelectorAll(SEL.menuItem));
   const target = items.find((mi) => /move to project|add to project|move to|projects?/i.test(mi.textContent || ''));
