@@ -97,7 +97,8 @@ function assistantText(message) {
 function ingestLine(st, line) {
   st.eventCount++;
   st.lastEventAt = Date.now();
-  if (ctx?.pro && ctx?.settings?.vaultKeepRaw && st.raw.length < 5000) st.raw.push(line);
+  const keepRaw = ctx?.settings?.debug || (ctx?.pro && ctx?.settings?.vaultKeepRaw);
+  if (keepRaw && st.raw.length < 5000) st.raw.push(line);
   if (line.startsWith('\u0000event:')) return;         // SSE event name, informational
   if (line === '[DONE]') { st.done = true; return; }
   let obj;
@@ -326,6 +327,7 @@ function onStreamEvent(e) {
       ctx.log('interceptor ready');
       break;
     case 'start': {
+      ctx.log('stream start', p.url, p.status, p.contentType);
       const st = newStreamState(p.requestId, p.meta);
       streams.set(p.requestId, st);
       st.dirty = true;
@@ -335,6 +337,7 @@ function onStreamEvent(e) {
     case 'data': {
       const st = streams.get(p.requestId); if (!st) return;
       for (const line of p.lines || []) ingestLine(st, line);
+      if (ctx.settings.debug) ctx.log('stream data', p.lines.length, 'lines', assistantText(st.message).length, 'chars');
       scheduleFlush(st);
       break;
     }
@@ -342,6 +345,7 @@ function onStreamEvent(e) {
       const st = streams.get(p.requestId); if (!st) return;
       const text = assistantText(st.message);
       const finalStatus = st.status === 'error' ? 'error' : (st.done || text.length > 0 ? 'complete' : 'interrupted');
+      ctx.log('stream done', { status: finalStatus, chars: text.length, events: st.eventCount });
       finish(st, finalStatus).then(() => { if (finalStatus === 'complete') checkVanished(st); });
       break;
     }

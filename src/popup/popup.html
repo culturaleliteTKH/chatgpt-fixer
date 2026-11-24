@@ -72,6 +72,14 @@
         <button id="consentReset" class="btn btn-small">Reset consent</button>
         <span id="consentStatus" class="hint"></span>
       </div>
+      <div class="field">
+        <span>Diagnostics (page structure only, no message text)</span>
+        <div class="row">
+          <button id="diagRun" class="btn btn-small">Run on current tab</button>
+          <button id="diagCopy" class="btn btn-small" disabled>Copy</button>
+        </div>
+        <textarea id="diagOut" rows="6" readonly placeholder="Open a chatgpt.com tab, then run."></textarea>
+      </div>
     </section>
 
     <section id="tab-pro" class="panel" role="tabpanel">

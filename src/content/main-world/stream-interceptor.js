@@ -162,6 +162,7 @@
     wrapped.toString = () => origFetch.toString();
   } catch {}
   window.fetch = wrapped;
+  try { document.documentElement.setAttribute('data-cgf-interceptor', '1'); } catch {}
 
   emit({ type: 'ready', t: Date.now() });
   try { window.dispatchEvent(new CustomEvent(EVENT_READY)); } catch {}

@@ -13,6 +13,8 @@ export const EVENTS = {
 
 /** `<html data-cgf-stream="on">` tells the MAIN-world interceptor that consent is given and Anti-Vanish is on. */
 export const STREAM_FLAG_ATTR = 'data-cgf-stream';
+/** Set by the MAIN-world interceptor once window.fetch is wrapped. */
+export const INTERCEPTOR_ATTR = 'data-cgf-interceptor';
 
 /** chrome.runtime message types. */
 export const MSG = {
@@ -29,6 +31,7 @@ export const MSG = {
   LICENSE_CLEAR: 'cgf/license/clear',
   BADGE_CLEAR: 'cgf/badge/clear',
   OPEN_URL: 'cgf/open-url',
+  DIAG: 'cgf/diag',
 };
 
 export const COMMANDS = {

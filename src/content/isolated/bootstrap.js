@@ -29,7 +29,7 @@
 
   const state = { settings: null, consent: null, pro: false };
   const registry = new Map(); // id -> { def, mod, active }
-  for (const def of MODULES) registry.set(def.id, { def, mod: null, active: false });
+  for (const def of MODULES) registry.set(def.id, { def, mod: null, active: false, error: null });
 
   const send = (msg) => new Promise((resolve) => {
     try {
@@ -60,6 +60,7 @@
       entry.mod = m.default || m;
       return entry.mod;
     } catch (e) {
+      entry.error = `load: ${e && e.message || e}`;
       warn(`module ${entry.def.id} failed to load`, e);
       return null;
     }
@@ -71,8 +72,10 @@
     try {
       await mod.init(ctx);
       entry.active = true;
+      entry.error = null;
       log('module up:', entry.def.id);
     } catch (e) {
+      entry.error = `init: ${e && e.message || e}`;
       warn(`module ${entry.def.id} init failed`, e);
       try { mod.destroy?.(); } catch {}
     }
@@ -126,7 +129,39 @@
 
   storage.onChanged(() => { sync(); });
 
+  /** Structure-only snapshot of the parts of the page the modules depend on. No message text. */
+  function diagnostics() {
+    const { SEL, $, $$, describeChain, describeTree } = dom;
+    const counts = {};
+    for (const [name, sel] of Object.entries(SEL)) if (typeof sel === 'string') { try { counts[name] = $$(sel).length; } catch (e) { counts[name] = `invalid: ${e.message}`; } }
+    const composer = dom.composer();
+    const firstChat = $(SEL.chatLink);
+    const sidebar = $(SEL.sidebar);
+    const msg = $(SEL.message);
+    const report = {
+      version: chrome.runtime.getManifest().version,
+      ua: navigator.userAgent,
+      path: location.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/g, '<id>'),
+      consent: state.consent, pro: state.pro,
+      streamFlag: document.documentElement.getAttribute(STREAM_FLAG_ATTR),
+      interceptor: document.documentElement.getAttribute(constants.INTERCEPTOR_ATTR) === '1',
+      modules: Object.fromEntries([...registry.values()].map((e) => [e.def.id, { enabled: !!state.settings?.modules?.[e.def.id], active: e.active, error: e.error }])),
+      selectorCounts: counts,
+      composerChain: composer ? describeChain(composer, 8) : 'composer not found',
+      firstMessageChain: msg ? describeChain(msg, 4) : 'no [data-message-author-role] elements',
+      sidebarChatItem: firstChat ? describeTree(firstChat.closest('li') || firstChat.parentElement?.parentElement || firstChat, 4, 6) : 'no chat links found',
+      sidebarHead: sidebar ? describeTree(sidebar, 2, 10) : 'sidebar not found',
+      buttonsMentioningSidebar: $$('button, a').filter((b) => /sidebar/i.test(b.getAttribute('aria-label') || b.getAttribute('data-testid') || '')).map((b) => `${dom.describeEl(b)} visible=${dom.isVisible(b)}`),
+      menuButtonsInSidebar: sidebar ? $$('button[aria-haspopup], [data-testid*="option" i]', sidebar).slice(0, 5).map(dom.describeEl) : [],
+    };
+    return report;
+  }
+
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg && msg.type === MSG.DIAG) {
+      try { sendResponse({ result: diagnostics() }); } catch (e) { sendResponse({ error: String(e && e.message || e) }); }
+      return;
+    }
     if (!msg || msg.type !== MSG.COMMAND) return;
     for (const entry of registry.values()) {
       if (!entry.active) continue;

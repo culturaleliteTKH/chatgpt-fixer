@@ -90,6 +90,7 @@ async function renderVault() {
       }),
       mk('Delete', 'btn-danger', async () => { await vault.delete(e.id); renderVault(); }),
     );
+    if (Array.isArray(e.raw) && e.raw.length) actions.append(mk('Raw', '', () => downloadText(`chatgpt-fixer-raw-${e.id}.txt`, e.raw.join('\n'), 'text/plain')));
     li.append(top, preview, actions);
     list.append(li);
   }
@@ -134,6 +135,22 @@ $('#handoffTemplate').addEventListener('change', (e) => storage.saveSettings({ h
 $('#vaultKeepRaw').addEventListener('change', (e) => storage.saveSettings({ vaultKeepRaw: e.target.checked }));
 $('#debug').addEventListener('change', (e) => storage.saveSettings({ debug: e.target.checked }));
 $('#consentReset').addEventListener('click', async () => { await resetConsent(); await refresh(); });
+
+$('#diagRun').addEventListener('click', async () => {
+  const out = $('#diagOut');
+  out.value = 'Running…';
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('No active tab');
+    const r = await new Promise((resolve) => chrome.tabs.sendMessage(tab.id, { type: MSG.DIAG }, (res) => { const err = chrome.runtime.lastError; resolve(err ? { error: err.message } : res); }));
+    if (!r || r.error) throw new Error(r?.error || 'No response. Is this a chatgpt.com tab with the extension loaded?');
+    out.value = JSON.stringify(r.result, null, 2);
+    $('#diagCopy').disabled = false;
+  } catch (e) {
+    out.value = String(e.message || e);
+  }
+});
+$('#diagCopy').addEventListener('click', async () => { await navigator.clipboard.writeText($('#diagOut').value); flashMsg('#consentStatus', 'Diagnostics copied'); });
 
 // ---------- pro ----------
 function renderPro() {

@@ -63,6 +63,42 @@ export function matchesShortcut(e, combo) {
   return e.key.toLowerCase() === key;
 }
 
+/** Compact one-line description of an element: tag plus the attributes that matter for selectors. */
+export function describeEl(el) {
+  if (!(el instanceof Element)) return String(el);
+  const keep = ['id', 'role', 'type', 'href', 'contenteditable', 'aria-label', 'aria-haspopup', 'aria-expanded', 'title', 'name', 'placeholder'];
+  const parts = [el.tagName.toLowerCase()];
+  for (const a of el.attributes) {
+    if (keep.includes(a.name) || a.name.startsWith('data-')) {
+      let v = a.value;
+      if (a.name === 'href') v = v.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/g, '<id>');
+      parts.push(`${a.name}="${v.slice(0, 60)}"`);
+    }
+  }
+  const cls = (el.getAttribute('class') || '').split(/\s+/).filter(Boolean).slice(0, 4).join(' ');
+  if (cls) parts.push(`class="${cls}${el.classList.length > 4 ? ' …' : ''}"`);
+  return `<${parts.join(' ')}>`;
+}
+
+/** Ancestor chain from `el` upward, closest first. Text content is never included. */
+export function describeChain(el, depth = 6) {
+  const out = [];
+  let cur = el;
+  while (cur && cur !== document.body && out.length < depth) { out.push(describeEl(cur)); cur = cur.parentElement; }
+  return out;
+}
+
+/** Shallow outline of a subtree (tags and attributes only). */
+export function describeTree(el, depth = 3, maxChildren = 8, indent = '') {
+  if (!(el instanceof Element)) return [];
+  const lines = [indent + describeEl(el)];
+  if (depth <= 0) return lines;
+  const kids = Array.from(el.children);
+  for (const k of kids.slice(0, maxChildren)) lines.push(...describeTree(k, depth - 1, maxChildren, indent + '  '));
+  if (kids.length > maxChildren) lines.push(`${indent}  … ${kids.length - maxChildren} more`);
+  return lines;
+}
+
 export function cssEscape(s) {
   return (globalThis.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/["\\]/g, '\\$&');
 }

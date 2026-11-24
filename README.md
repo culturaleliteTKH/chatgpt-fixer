@@ -73,6 +73,17 @@ stream-interceptor.js                     bootstrap.js  ──dynamic import─�
   third-party mark. If reviewers push back, rename to something like "Fixer for ChatGPT" and keep the
   description honest about being unaffiliated.
 
+## Debugging on the live site
+
+Popup → Settings → *Run on current tab* dumps a structure-only snapshot (selector match counts,
+module states, the ancestor chain of the composer, a sidebar item, the first message). Paste it into
+an issue; it contains no conversation text. With *Debug logging* on, the vault also keeps the raw
+SSE lines for each capture (*Raw* button in the popup) and the page console shows `[cgf]` lines.
+
+On macOS the extension commands default to `Option+S` / `Option+B`. ChatGPT already uses
+`Shift+Cmd+S` for its own sidebar toggle, so avoid that combination. Existing installs keep their
+old bindings; change them at `chrome://extensions/shortcuts`.
+
 ## Test checklist (manual, on chatgpt.com)
 
 - [ ] First run shows the consent modal; *Not now* leaves nav fixes active and meter hidden.
