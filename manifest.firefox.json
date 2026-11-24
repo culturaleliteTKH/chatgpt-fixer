@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ChatGPT Fixer — Classic UX & Session Guard",
   "short_name": "ChatGPT Fixer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Restores classic ChatGPT navigation and prevents lost responses on chatgpt.com. Local-first: nothing leaves your browser.",
   "browser_specific_settings": {
     "gecko": { "id": "chatgpt-fixer@example.com", "strict_min_version": "128.0" }
