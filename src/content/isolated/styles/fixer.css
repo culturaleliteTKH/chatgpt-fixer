@@ -36,7 +36,7 @@ html.light .cgf-root { --cgf-bg: #ffffff; --cgf-fg: #111827; --cgf-muted: #6b728
 .cgf-icon { display: inline-block; vertical-align: middle; color: var(--cgf-accent); }
 
 /* Toasts */
-.cgf-toast-host { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; display: flex; flex-direction: column; gap: 8px; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.cgf-toast-host { position: fixed; right: 16px; top: 64px; z-index: 2147483000; display: flex; flex-direction: column; gap: 8px; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; }
 .cgf-toast { pointer-events: auto; position: relative; display: flex; flex-direction: column; gap: 8px; background: var(--cgf-bg); color: var(--cgf-fg); border: 1px solid var(--cgf-border); border-left: 4px solid var(--cgf-accent); border-radius: 10px; padding: 10px 32px 10px 12px; box-shadow: var(--cgf-shadow); animation: cgf-in .18s ease-out; }
 .cgf-toast-warn { border-left-color: var(--cgf-warn); }
 .cgf-toast-error { border-left-color: var(--cgf-danger); }
