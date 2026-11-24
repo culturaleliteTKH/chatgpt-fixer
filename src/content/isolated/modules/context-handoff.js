@@ -29,11 +29,23 @@ function threadStats() {
   return { msgs, chars, tokens };
 }
 
+/** The meter floats just above the composer (position: fixed) so React never re-renders it away. */
+function positionMeter() {
+  const composer = ctx.dom.composer();
+  if (!meterEl || !composer) return;
+  const box = composer.closest('form') || composer.parentElement?.parentElement || composer;
+  const r = box.getBoundingClientRect();
+  if (!r.width) { meterEl.style.display = 'none'; return; }
+  meterEl.style.display = '';
+  meterEl.style.left = `${Math.round(r.left)}px`;
+  meterEl.style.width = `${Math.round(r.width)}px`;
+  meterEl.style.top = `${Math.round(r.top - 34)}px`;
+}
+
 function renderMeter() {
   if (!ctx.settings.showMeter) { meterEl?.remove(); meterEl = null; return; }
   const composer = ctx.dom.composer();
-  const form = composer?.closest('form') || document.querySelector(ctx.dom.SEL.composerForm);
-  if (!form) return;
+  if (!composer) { meterEl?.remove(); meterEl = null; return; }
   const { tokens, msgs } = threadStats();
   if (!msgs.length) { meterEl?.remove(); meterEl = null; return; }
   const max = Math.max(1000, Number(ctx.settings.contextWindow) || 128000);
@@ -43,8 +55,9 @@ function renderMeter() {
   if (!meterEl || !meterEl.isConnected) {
     meterEl = ctx.ui.el('button', { class: 'cgf-root cgf-meter', type: 'button', title: 'Estimated context usage — click to branch into a new chat' });
     meterEl.addEventListener('click', () => branch());
-    form.parentElement?.insertBefore(meterEl, form);
+    document.documentElement.append(meterEl);
   }
+  positionMeter();
   meterEl.dataset.level = level;
   meterEl.textContent = '';
   const bar = ctx.ui.el('span', { class: 'cgf-meter-bar' }, [ctx.ui.el('span', { class: 'cgf-meter-fill', style: `width:${pct}%` })]);
@@ -105,6 +118,8 @@ export default {
     unsubMutation = ctx.dom.onMutation(schedule);
     unsubNav = ctx.dom.onNavigate(() => { meterEl?.remove(); meterEl = null; schedule(); });
     on(document, 'keydown', onKey, { capture: true });
+    on(window, 'resize', positionMeter);
+    on(window, 'scroll', positionMeter, { capture: true, passive: true });
     renderMeter();
   },
   destroy() {
