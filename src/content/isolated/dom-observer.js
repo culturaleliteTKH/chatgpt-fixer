@@ -35,7 +35,7 @@ export const SEL = {
   chatLink: 'a[href^="/c/"], a[href^="/g/"][href*="/c/"], a[data-interactive-row-link][href*="/c/"]',
   chatItemOptions: 'button[aria-label*="sidebar options" i], [data-testid$="options"], button[aria-label*="options" i], button[aria-haspopup="menu"], button[aria-label*="More" i]',
   menu: '[role="menu"]',
-  menuItem: '[role="menuitem"]',
+  menuItem: '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [data-menu-item], [role="option"]',
   dialog: '[role="dialog"]',
 
   // Quotes / references

@@ -53,12 +53,17 @@ async function moveToProject(item) {
   let menu;
   try { menu = await waitForVisible(SEL.menu, { timeout: 2500 }); }
   catch { ctx.ui.toast(opt ? 'The options menu did not open.' : 'Could not find the chat options button (run Diagnostics in the popup).', { kind: 'warn' }); return false; }
-  await sleep(80);
-  const items = Array.from(menu.querySelectorAll(SEL.menuItem));
-  const target = items.filter(ctx.dom.isVisible).find((mi) => /move to project|add to project|move to|projects?/i.test(mi.textContent || ''));
+  await sleep(150);
+  const labelOf = (mi) => `${mi.getAttribute('aria-label') || ''} ${mi.textContent || ''}`.replace(/\s+/g, ' ').trim();
+  let items = Array.from(menu.querySelectorAll(SEL.menuItem)).filter(ctx.dom.isVisible);
+  if (!items.length) items = Array.from(document.querySelectorAll(SEL.menuItem)).filter((mi) => ctx.dom.isVisible(mi) && !mi.closest(SEL.sidebar));
+  if (!items.length) items = Array.from(menu.querySelectorAll('button, a, [tabindex]')).filter(ctx.dom.isVisible);
+  const target = items.find((mi) => /move to (another )?project|add to project|move to|projects?/i.test(labelOf(mi)));
   if (!target) {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    ctx.ui.toast('No "Move to project" item in this menu.', { kind: 'warn' });
+    const seen = items.map((mi) => labelOf(mi).slice(0, 24)).filter(Boolean).slice(0, 8).join(' · ') || 'no items';
+    ctx.ui.toast(`No "Move to project" item in this menu. Found: ${seen}`, { kind: 'warn', timeout: 12000 });
+    ctx.log('menu', ctx.dom.describeTree(menu, 3, 12).join('\n'));
     return false;
   }
   target.click();
