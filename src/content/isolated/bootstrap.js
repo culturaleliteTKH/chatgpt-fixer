@@ -135,6 +135,19 @@
     const counts = {};
     for (const [name, sel] of Object.entries(SEL)) if (typeof sel === 'string') { try { counts[name] = $$(sel).length; } catch (e) { counts[name] = `invalid: ${e.message}`; } }
     const composer = dom.composer();
+    const main = $('main') || document.body;
+    const census = {};
+    for (const el of main.querySelectorAll('*')) {
+      for (const a of el.attributes) {
+        if (!(a.name.startsWith('data-') || a.name === 'role')) continue;
+        if (/^data-(radix|state|orientation|highlighted|virtualkeyboard)/.test(a.name)) continue;
+        const key = a.name === 'role' ? `role=${a.value}` : a.name;
+        census[key] = (census[key] || 0) + 1;
+      }
+    }
+    const interesting = Object.entries(census).filter(([k]) => /turn|message|assistant|user|author|thread|conversation|markdown|prose|scroll|role=/i.test(k));
+    const turnish = Array.from(main.querySelectorAll('[data-turn], [data-turn-id], [data-message-id], [data-author], article, [data-scroll-anchor]'))
+      .slice(0, 3);
     const firstChat = $(SEL.chatLink);
     const sidebar = $(SEL.sidebar);
     const msg = $(SEL.message);
@@ -148,7 +161,12 @@
       modules: Object.fromEntries([...registry.values()].map((e) => [e.def.id, { enabled: !!state.settings?.modules?.[e.def.id], active: e.active, error: e.error }])),
       selectorCounts: counts,
       composerChain: composer ? describeChain(composer, 8) : 'composer not found',
-      firstMessageChain: msg ? describeChain(msg, 4) : 'no [data-message-author-role] elements',
+      firstMessageChain: msg ? describeChain(msg, 4) : 'no message elements matched',
+      messagesRead: dom.readMessages().map((m) => `${m.role}:${m.text.length} chars ${dom.describeEl(m.el)}`).slice(0, 6),
+      mainAttributeCensus: Object.fromEntries(Object.entries(census).sort((a, b) => b[1] - a[1]).slice(0, 60)),
+      mainInterestingAttributes: Object.fromEntries(interesting),
+      turnCandidates: turnish.map((el) => describeTree(el, 3, 3)),
+      mainOutline: describeTree(main, 7, 3),
       sidebarChatItem: firstChat ? describeTree(firstChat.closest('li') || firstChat.parentElement?.parentElement || firstChat, 4, 6) : 'no chat links found',
       sidebarHead: sidebar ? describeTree(sidebar, 2, 10) : 'sidebar not found',
       buttonsMentioningSidebar: $$('button, a').filter((b) => /sidebar/i.test(b.getAttribute('aria-label') || b.getAttribute('data-testid') || '')).map((b) => `${dom.describeEl(b)} visible=${dom.isVisible(b)}`),
