@@ -2,31 +2,38 @@
 // means editing one file. Prefer data-testid / ARIA / structure; never Tailwind class names.
 
 export const SEL = {
-  // Messages
-  message: '[data-message-author-role]',
-  messageById: (id) => `[data-message-id="${cssEscape(id)}"]`,
-  assistantMessage: '[data-message-author-role="assistant"]',
-  userMessage: '[data-message-author-role="user"]',
-  turn: 'article[data-testid^="conversation-turn"], [data-testid^="conversation-turn"]',
+  // Messages. The old frontend used [data-message-author-role]; the 2026 one dropped it, so we
+  // accept several turn-level markers and keep the innermost match (see readMessages).
+  message: [
+    '[data-message-author-role]',
+    '[data-turn]',
+    '[data-turn-id]',
+    '[data-message-id]',
+    '[data-testid^="conversation-turn"]',
+    'article[data-scroll-anchor]',
+  ].join(', '),
+  messageById: (id) => `[data-message-id="${cssEscape(id)}"], [data-turn-id="${cssEscape(id)}"]`,
+  assistantMessage: '[data-message-author-role="assistant"], [data-turn="assistant"], [data-author="assistant"]',
+  userMessage: '[data-message-author-role="user"], [data-turn="user"], [data-author="user"]',
+  turn: 'article[data-testid^="conversation-turn"], [data-testid^="conversation-turn"], [data-turn]',
 
-  // Composer
-  composer: '#prompt-textarea, [data-testid="prompt-textarea"], form textarea, form [contenteditable="true"]',
-  composerForm: 'form[data-type="unified-composer"], main form',
+  // Composer: a ProseMirror contenteditable; there is no <form> around it any more.
+  composer: '[data-composer-markdown][contenteditable="true"], #prompt-textarea, [data-testid="prompt-textarea"], div.ProseMirror[contenteditable="true"][role="textbox"], form textarea, form [contenteditable="true"]',
+  composerRoot: '[data-composer-surface-variant], form[data-type="unified-composer"], [data-composer-body], main form',
   sendButton: '[data-testid="send-button"], button[aria-label*="Send" i]',
   stopButton: '[data-testid="stop-button"], button[aria-label*="Stop" i]',
 
-  // Sidebar / navigation
-  sidebar: 'nav[aria-label], #stage-slideover-sidebar, nav',
+  // Sidebar / navigation. The collapsed rail is also a <nav>; prefer the full one.
+  sidebar: 'nav:not([data-app-navigation-rail]), #stage-slideover-sidebar, nav',
   sidebarToggle: [
+    '[data-app-shell-sidebar-trigger]',
     '[data-testid="close-sidebar-button"]',
     '[data-testid="open-sidebar-button"]',
     'button[aria-label*="sidebar" i]',
-    'button[aria-label*="Close sidebar" i]',
-    'button[aria-label*="Open sidebar" i]',
   ].join(', '),
   newChat: '[data-testid="create-new-chat-button"], a[href="/"], a[aria-label*="New chat" i], button[aria-label*="New chat" i]',
-  chatLink: 'a[href^="/c/"], a[href^="/g/"][href*="/c/"]',
-  chatItemOptions: 'button[aria-haspopup="menu"], [data-testid$="options"], button[aria-label*="options" i], button[aria-label*="More" i]',
+  chatLink: 'a[href^="/c/"], a[href^="/g/"][href*="/c/"], a[data-interactive-row-link][href*="/c/"]',
+  chatItemOptions: 'button[aria-label*="sidebar options" i], [data-testid$="options"], button[aria-label*="options" i], button[aria-haspopup="menu"], button[aria-label*="More" i]',
   menu: '[role="menu"]',
   menuItem: '[role="menuitem"]',
   dialog: '[role="dialog"]',
@@ -188,14 +195,37 @@ export function conversationTitle() {
   return t && t.toLowerCase() !== 'chatgpt' ? t : 'Untitled conversation';
 }
 
-/** Visible messages as {role, text, id} in document order. */
+export function roleOf(el) {
+  const explicit = el.getAttribute('data-message-author-role') || el.getAttribute('data-turn') || el.getAttribute('data-author');
+  if (explicit) return explicit;
+  const hint = `${el.getAttribute('data-testid') || ''} ${el.getAttribute('aria-label') || ''} ${el.className || ''}`;
+  if (/assistant|agent/i.test(hint)) return 'assistant';
+  if (/user|human/i.test(hint)) return 'user';
+  return 'unknown';
+}
+
+/** Visible messages as {role, text, id} in document order. Only innermost matches are kept. */
 export function readMessages() {
-  return $$(SEL.message).map((el) => ({
-    id: el.getAttribute('data-message-id') || null,
-    role: el.getAttribute('data-message-author-role') || 'unknown',
+  const all = $$(SEL.message);
+  const innermost = all.filter((el) => !all.some((other) => other !== el && el.contains(other)));
+  return innermost.map((el) => ({
+    id: el.getAttribute('data-message-id') || el.getAttribute('data-turn-id') || null,
+    role: roleOf(el),
     text: (el.innerText || el.textContent || '').trim(),
     el,
   })).filter((m) => m.text.length > 0);
+}
+
+/** Like waitFor, but ignores elements that are in the DOM yet hidden (native popovers, radix portals). */
+export function waitForVisible(sel, { timeout = 8000, root = document } = {}) {
+  const pick = () => Array.from(root.querySelectorAll(sel)).find(isVisible) || null;
+  return new Promise((resolve, reject) => {
+    const found = pick();
+    if (found) return resolve(found);
+    const mo = new MutationObserver(() => { const el = pick(); if (el) { mo.disconnect(); clearTimeout(t); resolve(el); } });
+    mo.observe(root === document ? document.documentElement : root, { childList: true, subtree: true, attributes: true });
+    const t = setTimeout(() => { mo.disconnect(); reject(new Error(`timeout waiting for visible ${sel}`)); }, timeout);
+  });
 }
 
 /** Find the composer element (textarea or contenteditable). */

@@ -33,7 +33,7 @@ function threadStats() {
 function positionMeter() {
   const composer = ctx.dom.composer();
   if (!meterEl || !composer) return;
-  const box = composer.closest('form') || composer.parentElement?.parentElement || composer;
+  const box = composer.closest(ctx.dom.SEL.composerRoot) || composer.parentElement?.parentElement || composer;
   const r = box.getBoundingClientRect();
   if (!r.width) { meterEl.style.display = 'none'; return; }
   meterEl.style.display = '';

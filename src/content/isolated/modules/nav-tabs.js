@@ -56,8 +56,8 @@ function toggleSidebar() {
   const candidates = ctx.dom.$$(ctx.dom.SEL.sidebarToggle).filter(ctx.dom.isVisible);
   // Prefer an explicit close button when the sidebar is open; several buttons can match.
   const label = (b) => b.getAttribute('aria-label') || b.getAttribute('data-testid') || '';
-  const btn = candidates.find((b) => /close/i.test(label(b)))
-    || candidates.find((b) => /open|toggle/i.test(label(b)))
+  const btn = candidates.find((b) => /close|hide|collapse/i.test(label(b)))
+    || candidates.find((b) => /open|show|expand|toggle/i.test(label(b)))
     || candidates[0];
   if (btn) { btn.click(); return true; }
   ctx.ui.toast('Sidebar toggle button not found (ChatGPT UI may have changed).', { kind: 'warn' });
