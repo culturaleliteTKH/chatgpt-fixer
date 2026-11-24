@@ -35,6 +35,34 @@ export const SEL = {
   quote: 'blockquote, [data-testid*="quote" i], [aria-label*="quote" i], [data-quote]',
 };
 
+export function isVisible(el) {
+  if (!el || !el.isConnected) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return false;
+  const cs = getComputedStyle(el);
+  return cs.visibility !== 'hidden' && cs.display !== 'none';
+}
+
+/**
+ * Match a keydown against a combo like "Alt+S". Uses e.code for the letter so it works on macOS,
+ * where Option+letter changes e.key to a symbol (Option+B gives "∫").
+ */
+export function matchesShortcut(e, combo) {
+  if (!combo) return false;
+  const parts = combo.toLowerCase().split('+').map((s) => s.trim());
+  const key = parts.pop();
+  const want = {
+    alt: parts.includes('alt') || parts.includes('option'),
+    ctrl: parts.includes('ctrl') || parts.includes('control'),
+    shift: parts.includes('shift'),
+    meta: parts.includes('cmd') || parts.includes('meta') || parts.includes('command'),
+  };
+  if (e.altKey !== want.alt || e.ctrlKey !== want.ctrl || e.shiftKey !== want.shift || e.metaKey !== want.meta) return false;
+  if (/^[a-z]$/.test(key)) return e.code === `Key${key.toUpperCase()}` || e.key.toLowerCase() === key;
+  if (/^[0-9]$/.test(key)) return e.code === `Digit${key}` || e.key === key;
+  return e.key.toLowerCase() === key;
+}
+
 export function cssEscape(s) {
   return (globalThis.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/["\\]/g, '\\$&');
 }

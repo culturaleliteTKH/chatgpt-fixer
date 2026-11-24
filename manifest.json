@@ -42,11 +42,11 @@
   ],
   "commands": {
     "toggle-sidebar": {
-      "suggested_key": { "default": "Alt+S", "mac": "Command+Shift+S" },
+      "suggested_key": { "default": "Alt+S", "mac": "Alt+S" },
       "description": "Toggle the ChatGPT sidebar"
     },
     "branch-chat": {
-      "suggested_key": { "default": "Alt+B", "mac": "Command+Shift+B" },
+      "suggested_key": { "default": "Alt+B", "mac": "Alt+B" },
       "description": "Branch the current conversation into a new chat"
     }
   },

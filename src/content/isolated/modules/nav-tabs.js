@@ -53,24 +53,22 @@ function handlePointer(e) {
 }
 
 function toggleSidebar() {
-  const btn = document.querySelector(ctx.dom.SEL.sidebarToggle);
+  const candidates = ctx.dom.$$(ctx.dom.SEL.sidebarToggle).filter(ctx.dom.isVisible);
+  // Prefer an explicit close button when the sidebar is open; several buttons can match.
+  const label = (b) => b.getAttribute('aria-label') || b.getAttribute('data-testid') || '';
+  const btn = candidates.find((b) => /close/i.test(label(b)))
+    || candidates.find((b) => /open|toggle/i.test(label(b)))
+    || candidates[0];
   if (btn) { btn.click(); return true; }
   ctx.ui.toast('Sidebar toggle button not found (ChatGPT UI may have changed).', { kind: 'warn' });
   return false;
 }
 
-function matchesShortcut(e, combo) {
-  if (!combo) return false;
-  const parts = combo.toLowerCase().split('+').map((s) => s.trim());
-  const key = parts.pop();
-  const want = { alt: parts.includes('alt'), ctrl: parts.includes('ctrl') || parts.includes('control'), shift: parts.includes('shift'), meta: parts.includes('cmd') || parts.includes('meta') || parts.includes('command') };
-  return e.key.toLowerCase() === key && e.altKey === want.alt && e.ctrlKey === want.ctrl && e.shiftKey === want.shift && e.metaKey === want.meta;
-}
-
 function onKey(e) {
   if (!ctx.settings.shortcuts.inPage) return;
-  if (matchesShortcut(e, ctx.settings.shortcuts.toggleSidebar)) {
+  if (ctx.dom.matchesShortcut(e, ctx.settings.shortcuts.toggleSidebar)) {
     e.preventDefault();
+    e.stopPropagation();
     lastKeyHandled = Date.now();
     toggleSidebar();
   }

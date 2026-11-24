@@ -92,17 +92,9 @@ async function branch() {
   }
 }
 
-function matchesShortcut(e, combo) {
-  if (!combo) return false;
-  const parts = combo.toLowerCase().split('+').map((s) => s.trim());
-  const key = parts.pop();
-  const want = { alt: parts.includes('alt'), ctrl: parts.includes('ctrl') || parts.includes('control'), shift: parts.includes('shift'), meta: parts.includes('cmd') || parts.includes('meta') || parts.includes('command') };
-  return e.key.toLowerCase() === key && e.altKey === want.alt && e.ctrlKey === want.ctrl && e.shiftKey === want.shift && e.metaKey === want.meta;
-}
-
 function onKey(e) {
   if (!ctx.settings.shortcuts.inPage) return;
-  if (matchesShortcut(e, ctx.settings.shortcuts.branchChat)) { e.preventDefault(); branch(); }
+  if (ctx.dom.matchesShortcut(e, ctx.settings.shortcuts.branchChat)) { e.preventDefault(); e.stopPropagation(); branch(); }
 }
 
 export default {
