@@ -53,12 +53,23 @@ async function moveToProject(item) {
   let menu;
   try { menu = await waitForVisible(SEL.menu, { timeout: 2500 }); }
   catch { ctx.ui.toast(opt ? 'The options menu did not open.' : 'Could not find the chat options button (run Diagnostics in the popup).', { kind: 'warn' }); return false; }
-  await sleep(150);
   const labelOf = (mi) => `${mi.getAttribute('aria-label') || ''} ${mi.textContent || ''}`.replace(/\s+/g, ' ').trim();
-  let items = Array.from(menu.querySelectorAll(SEL.menuItem)).filter(ctx.dom.isVisible);
-  if (!items.length) items = Array.from(document.querySelectorAll(SEL.menuItem)).filter((mi) => ctx.dom.isVisible(mi) && !mi.closest(SEL.sidebar));
-  if (!items.length) items = Array.from(menu.querySelectorAll('button, a, [tabindex]')).filter(ctx.dom.isVisible);
-  const target = items.find((mi) => /move to (another )?project|add to project|move to|projects?/i.test(labelOf(mi)));
+  const wanted = /move to (another )?project|add to project|move to|projects?/i;
+  const readItems = () => {
+    let items = Array.from(menu.querySelectorAll(SEL.menuItem)).filter(ctx.dom.isVisible);
+    if (!items.length) items = Array.from(document.querySelectorAll(SEL.menuItem)).filter((mi) => ctx.dom.isVisible(mi) && !mi.closest(SEL.sidebar));
+    if (!items.length) items = Array.from(menu.querySelectorAll('button, a, [tabindex]')).filter(ctx.dom.isVisible);
+    return items;
+  };
+  // The menu shows a "Loading" placeholder until its items arrive; poll for the real entries.
+  let items = [];
+  let target = null;
+  for (let t = 0; t < 25 && !target; t++) {
+    await sleep(100);
+    items = readItems();
+    target = items.find((mi) => wanted.test(labelOf(mi))) || null;
+    if (!target && items.length && !items.some((mi) => /loading/i.test(labelOf(mi)))) break;
+  }
   if (!target) {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     const seen = items.map((mi) => labelOf(mi).slice(0, 24)).filter(Boolean).slice(0, 8).join(' · ') || 'no items';
