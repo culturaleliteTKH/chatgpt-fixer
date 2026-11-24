@@ -242,10 +242,18 @@ export function waitForVisible(sel, { timeout = 8000, root = document } = {}) {
   });
 }
 
-/** Find the composer element (textarea or contenteditable). Hidden composers exist in dialogs; prefer a visible one. */
+/**
+ * Find the main composer. Other editors share its markup: hidden ones in dialogs, and inline
+ * widgets inside replies (an email draft card, for instance). Skip editors inside a turn and take
+ * the lowest visible one on screen.
+ */
 export function composer() {
   const all = $$(SEL.composer);
-  return all.find(isVisible) || all[0] || null;
+  const visible = all.filter(isVisible);
+  const outsideThread = visible.filter((el) => !el.closest(SEL.turn) && !el.closest(SEL.message));
+  const pool = outsideThread.length ? outsideThread : visible;
+  pool.sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom);
+  return pool[0] || all[0] || null;
 }
 
 /** Insert text into the composer, supporting both textarea and ProseMirror-style contenteditable. */

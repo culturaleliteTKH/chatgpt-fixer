@@ -19,7 +19,7 @@ const PAGE = `<!doctype html><html class="dark"><head><meta charset="utf-8"><tit
   <article data-testid="conversation-turn-1"><div data-message-author-role="user" data-message-id="u1">Hello there, tell me about Denmark. ${'Lorem ipsum dolor sit amet. '.repeat(60)}</div></article>
   <article data-testid="conversation-turn-2"><div data-message-author-role="assistant" data-message-id="a1">Denmark is a Nordic country in Northern Europe. <blockquote>tell me about Denmark</blockquote></div></article>
   <div data-turn-key="t3" data-conversation-role="user" data-virtualized-turn=""><div data-user-message-bubble="">New-style user bubble</div></div>
-  <div data-turn-key="t4" data-conversation-role="assistant" data-virtualized-turn=""><div data-dil-message-id="m4"><div data-response-body="">New-style assistant body</div></div></div>
+  <div data-turn-key="t4" data-conversation-role="assistant" data-virtualized-turn=""><div data-dil-message-id="m4"><div data-response-body="">New-style assistant body <div contenteditable="true" data-composer-markdown="" role="textbox" style="height:20px">inline widget editor</div></div></div></div>
   <form><div id="prompt-textarea" contenteditable="true"></div><button type="button" data-testid="send-button">Send</button></form>
 </main>
 <script>
@@ -84,6 +84,11 @@ await page.waitForSelector('.cgf-panel .cgf-pre-main', { timeout: 5000 });
 const recovered = await page.textContent('.cgf-panel .cgf-pre-main');
 assert.equal(recovered, 'Copenhagen is the capital of Denmark.');
 console.log('✓ recovery panel shows assembled text');
+
+// 3a. the meter anchors to the main composer, not the inline editor inside the reply
+const meterBox = await page.evaluate(() => { const m = document.querySelector('.cgf-meter').getBoundingClientRect(); const c = document.querySelector('#prompt-textarea').getBoundingClientRect(); return { meterTop: m.top, composerTop: c.top }; });
+assert.ok(meterBox.composerTop - meterBox.meterTop < 60 && meterBox.meterTop < meterBox.composerTop, `meter should sit just above the main composer: ${JSON.stringify(meterBox)}`);
+console.log('✓ meter anchored to the main composer');
 
 // 3b. insert into composer
 await page.click('.cgf-panel button:has-text("Insert into composer")');
