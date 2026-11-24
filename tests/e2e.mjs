@@ -18,6 +18,8 @@ const PAGE = `<!doctype html><html class="dark"><head><meta charset="utf-8"><tit
 <main>
   <article data-testid="conversation-turn-1"><div data-message-author-role="user" data-message-id="u1">Hello there, tell me about Denmark. ${'Lorem ipsum dolor sit amet. '.repeat(60)}</div></article>
   <article data-testid="conversation-turn-2"><div data-message-author-role="assistant" data-message-id="a1">Denmark is a Nordic country in Northern Europe. <blockquote>tell me about Denmark</blockquote></div></article>
+  <div data-turn-key="t3" data-conversation-role="user" data-virtualized-turn=""><div data-user-message-bubble="">New-style user bubble</div></div>
+  <div data-turn-key="t4" data-conversation-role="assistant" data-virtualized-turn=""><div data-dil-message-id="m4"><div data-response-body="">New-style assistant body</div></div></div>
   <form><div id="prompt-textarea" contenteditable="true"></div><button type="button" data-testid="send-button">Send</button></form>
 </main>
 <script>
@@ -142,6 +144,12 @@ console.log('✓ Pro key activated');
 await popup.click('#licenseRemove');
 await popup.waitForFunction(() => document.querySelector('#proBadge')?.textContent === 'Free', null, { timeout: 5000 });
 console.log('✓ license removed');
+
+// 9b. diagnostics reads both message markups (innermost elements only)
+const diag = await popup.evaluate(() => new Promise((resolve) => chrome.tabs.query({ url: 'https://chatgpt.com/*' }, (tabs) => chrome.tabs.sendMessage(tabs[0].id, { type: 'cgf/diag' }, resolve))));
+assert.deepEqual(diag.result.messagesRead.map((s) => s.split(':')[0]), ['user', 'assistant', 'user', 'assistant']);
+assert.equal(diag.result.version, '0.2.0');
+console.log('✓ diagnostics: 4 messages read across old and new markup');
 
 // 10. toggling anti-vanish off flips the stream flag live
 await popup.click('.tab[data-tab="fixes"]');

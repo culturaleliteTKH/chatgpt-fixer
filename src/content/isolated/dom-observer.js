@@ -4,18 +4,28 @@
 export const SEL = {
   // Messages. The old frontend used [data-message-author-role]; the 2026 one dropped it, so we
   // accept several turn-level markers and keep the innermost match (see readMessages).
+  // 2026 frontend: virtualized turns ([data-turn-key]) holding [data-user-message-bubble] or
+  // [data-response-body]; the role sits on [data-conversation-role]; ids on data-dil-message-id.
+  // Only rendered turns exist in the DOM, so counts cover what is on screen, not the whole thread.
   message: [
+    '[data-user-message-bubble]',
+    '[data-response-body]',
     '[data-message-author-role]',
+    '[data-turn-key]',
     '[data-turn]',
     '[data-turn-id]',
     '[data-message-id]',
     '[data-testid^="conversation-turn"]',
-    'article[data-scroll-anchor]',
   ].join(', '),
-  messageById: (id) => `[data-message-id="${cssEscape(id)}"], [data-turn-id="${cssEscape(id)}"]`,
-  assistantMessage: '[data-message-author-role="assistant"], [data-turn="assistant"], [data-author="assistant"]',
-  userMessage: '[data-message-author-role="user"], [data-turn="user"], [data-author="user"]',
-  turn: 'article[data-testid^="conversation-turn"], [data-testid^="conversation-turn"], [data-turn]',
+  messageById: (id) => [
+    `[data-message-id="${cssEscape(id)}"]`,
+    `[data-turn-id="${cssEscape(id)}"]`,
+    `[data-dil-message-id="${cssEscape(id)}"]`,
+    `[data-chatgpt-selection-message-id="${cssEscape(id)}"]`,
+  ].join(', '),
+  assistantMessage: '[data-response-body], [data-message-author-role="assistant"], [data-conversation-role="assistant"], [data-turn="assistant"]',
+  userMessage: '[data-user-message-bubble], [data-message-author-role="user"], [data-conversation-role="user"], [data-turn="user"]',
+  turn: '[data-turn-key], article[data-testid^="conversation-turn"], [data-testid^="conversation-turn"], [data-turn]',
 
   // Composer: a ProseMirror contenteditable; there is no <form> around it any more.
   composer: '[data-composer-markdown][contenteditable="true"], #prompt-textarea, [data-testid="prompt-textarea"], div.ProseMirror[contenteditable="true"][role="textbox"], form textarea, form [contenteditable="true"]',
@@ -196,7 +206,10 @@ export function conversationTitle() {
 }
 
 export function roleOf(el) {
-  const explicit = el.getAttribute('data-message-author-role') || el.getAttribute('data-turn') || el.getAttribute('data-author');
+  if (el.matches('[data-user-message-bubble]')) return 'user';
+  if (el.matches('[data-response-body]')) return 'assistant';
+  const explicit = el.getAttribute('data-message-author-role') || el.getAttribute('data-turn') || el.getAttribute('data-author')
+    || el.closest('[data-conversation-role]')?.getAttribute('data-conversation-role');
   if (explicit) return explicit;
   const hint = `${el.getAttribute('data-testid') || ''} ${el.getAttribute('aria-label') || ''} ${el.className || ''}`;
   if (/assistant|agent/i.test(hint)) return 'assistant';
@@ -209,7 +222,8 @@ export function readMessages() {
   const all = $$(SEL.message);
   const innermost = all.filter((el) => !all.some((other) => other !== el && el.contains(other)));
   return innermost.map((el) => ({
-    id: el.getAttribute('data-message-id') || el.getAttribute('data-turn-id') || null,
+    id: el.getAttribute('data-message-id') || el.getAttribute('data-turn-id') || el.getAttribute('data-dil-message-id')
+      || el.closest('[data-dil-message-id]')?.getAttribute('data-dil-message-id') || null,
     role: roleOf(el),
     text: (el.innerText || el.textContent || '').trim(),
     el,
@@ -228,9 +242,10 @@ export function waitForVisible(sel, { timeout = 8000, root = document } = {}) {
   });
 }
 
-/** Find the composer element (textarea or contenteditable). */
+/** Find the composer element (textarea or contenteditable). Hidden composers exist in dialogs; prefer a visible one. */
 export function composer() {
-  return $(SEL.composer);
+  const all = $$(SEL.composer);
+  return all.find(isVisible) || all[0] || null;
 }
 
 /** Insert text into the composer, supporting both textarea and ProseMirror-style contenteditable. */
