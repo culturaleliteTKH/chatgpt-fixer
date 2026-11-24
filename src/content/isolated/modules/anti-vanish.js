@@ -61,6 +61,7 @@ function applyOp(st, root, op) {
       ptrSet(root, p, (cur) => {
         if (Array.isArray(cur)) return cur.concat(Array.isArray(op.v) ? op.v : [op.v]);
         if (typeof cur === 'string' || cur == null) return (cur || '') + (typeof op.v === 'string' ? op.v : '');
+        if (cur && typeof cur === 'object' && op.v && typeof op.v === 'object') return { ...cur, ...op.v };
         return cur;
       });
       break;
@@ -166,6 +167,33 @@ async function flush(st) {
 }
 
 // ---------- failure detection ----------
+
+/** True once the stream carried a terminal frame, whatever happens to the socket afterwards. */
+function sawFinalFrame(st) {
+  const m = st.message;
+  return !!(st.done || (m && (m.status === 'finished_successfully' || m.end_turn === true)));
+}
+
+/**
+ * The page may abort its fetch controller as soon as it has the final frame, which errors our
+ * branch of the tee and can drop the last bytes. Wait for the page to render, then take the
+ * longer text from the DOM. Returns true when the entry ended up complete.
+ */
+async function reconcileWithDom(st) {
+  await new Promise((r) => setTimeout(r, 2500));
+  const captured = assistantText(st.message);
+  const byId = st.message?.id ? document.querySelector(ctx.dom.SEL.messageById(st.message.id)) : null;
+  const shown = byId ? (byId.innerText || byId.textContent || '').trim() : '';
+  if (!shown) return false;
+  const head = captured.replace(/\s+/g, ' ').trim().slice(0, 40);
+  const matches = !head || shown.replace(/\s+/g, ' ').includes(head);
+  if (!matches || shown.length < captured.length * 0.9) return false;
+  try {
+    const entry = toEntry(st);
+    await vault.put({ ...entry, text: shown.length > captured.length ? shown : entry.text, status: 'complete', endedAt: Date.now(), note: entry.note ? entry.note + ' · completed from page' : 'Completed from page' });
+  } catch {}
+  return true;
+}
 
 function finish(st, status, note) {
   if (st.status !== 'streaming') { st.dirty = true; return flush(st); }
@@ -322,8 +350,15 @@ function onStreamEvent(e) {
     case 'nonstream': {
       const st = streams.get(p.requestId); if (!st) return;
       const text = assistantText(st.message);
-      finish(st, p.type === 'nonstream' ? 'complete' : (p.type === 'abort' ? 'interrupted' : 'error'), p.message);
-      if (p.type !== 'nonstream' && text.length > 0) offerRecovery(st.requestId, p.type === 'abort' ? 'Generation was cut off. Partial text saved.' : 'The request failed. Partial text saved.');
+      ctx.log('stream end', p.type, { final: sawFinalFrame(st), chars: text.length, events: st.eventCount, message: p.message });
+      if (p.type === 'nonstream' || (p.type === 'abort' && sawFinalFrame(st))) {
+        finish(st, 'complete').then(() => reconcileWithDom(st).then((ok) => { if (!ok) checkVanished(st); }));
+        break;
+      }
+      const status = p.type === 'abort' ? 'interrupted' : 'error';
+      finish(st, status, p.message).then(() => reconcileWithDom(st)).then((recovered) => {
+        if (!recovered && text.length > 0) offerRecovery(st.requestId, p.type === 'abort' ? 'Generation was cut off. Partial text saved.' : 'The request failed. Partial text saved.');
+      });
       break;
     }
   }

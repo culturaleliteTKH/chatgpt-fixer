@@ -115,6 +115,8 @@
       flush();
       emit({ type: 'done', requestId, count, t: Date.now() });
     } catch (err) {
+      // An abort drops whatever was still buffered; keep the partial line we do have.
+      if (buf.trim().startsWith('data:')) queue(buf.trim().slice(5).trimStart());
       flush();
       const aborted = err && (err.name === 'AbortError' || /abort/i.test(String(err.message)));
       emit({ type: aborted ? 'abort' : 'error', requestId, count, message: String(err && err.message || err), t: Date.now() });
